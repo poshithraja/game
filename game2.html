@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Math Sprint</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        .game-box {
+            background: #34495e;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .timer-bar {
+            width: 100%;
+            height: 10px;
+            background: #2c3e50;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .timer-fill {
+            height: 100%;
+            background: #e74c3c;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+        .question {
+            font-size: 40px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .btn {
+            padding: 15px;
+            font-size: 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #ecf0f1;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .btn:active { transform: scale(0.95); }
+        .score { font-size: 18px; color: #f1c40f; margin-bottom: 10px; }
+        
+        /* Game Over Screen */
+        #gameOver { display: none; }
+        .restart-btn { background: #27ae60; color: white; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-btn">← Menu</a>
+
+    <div class="game-box" id="gameScreen">
+        <div class="score">Score: <span id="scoreVal">0</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="timerBar"></div></div>
+        
+        <div class="question" id="questionText">2 + 2 = ?</div>
+        
+        <div class="options">
+            <button class="btn" id="btn1" onclick="checkAnswer(this)"></button>
+            <button class="btn" id="btn2" onclick="checkAnswer(this)"></button>
+        </div>
+    </div>
+
+    <div class="game-box" id="gameOver">
+        <h2>Time's Up!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button class="btn restart-btn" onclick="startGame()">Play Again</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 100; // Percentage
+        let gameActive = false;
+        let timerInterval;
+        let currentAnswer = 0;
+
+        function startGame() {
+            score = 0;
+            timeLeft = 100;
+            gameActive = true;
+            document.getElementById('scoreVal').innerText = score;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            generateQuestion();
+            
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.5; // Speed of decay
+                document.getElementById('timerBar').style.width = timeLeft + "%";
+                if(timeLeft <= 0) endGame();
+            }, 50);
+        }
+
+        function generateQuestion() {
+            let n1 = Math.floor(Math.random() * 10) + 1;
+            let n2 = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = n1 + n2;
+            
+            document.getElementById('questionText').innerText = `${n1} + ${n2} = ?`;
+            
+            // Randomize button positions
+            let wrongAnswer = currentAnswer + Math.floor(Math.random() * 3) + 1; 
+            if(Math.random() > 0.5) {
+                document.getElementById('btn1').innerText = currentAnswer;
+                document.getElementById('btn2').innerText = wrongAnswer;
+            } else {
+                document.getElementById('btn1').innerText = wrongAnswer;
+                document.getElementById('btn2').innerText = currentAnswer;
+            }
+        }
+
+        function checkAnswer(btn) {
+            if(!gameActive) return;
+            
+            if(parseInt(btn.innerText) === currentAnswer) {
+                score++;
+                document.getElementById('scoreVal').innerText = score;
+                timeLeft = Math.min(100, timeLeft + 10); // Bonus time
+                generateQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').innerText = score;
+        }
+
+        // Start immediately on load
+        startGame();
+    </script>
+</body>
+</html>
