@@ -236,36 +236,41 @@
             const submitBtn = document.querySelector('.submit-btn');
 
             submitBtn.disabled = true;
+            submitBtn.style.opacity = "0.7";
             saveText.style.display = "block";
             saveText.innerText = "Saving...";
 
-            // We use a hidden iframe trick or 'no-cors' to bypass the error.
-            // But the most reliable way for simple text data is to just use GET for saving too
-            // (since we aren't sending passwords or huge files).
+            // TRICK: Use an Image to bypass all CORS/Network blocks
+            // Browsers let images load from anywhere. We "load" the save URL.
+            const img = new Image();
             
-            const saveUrl = `${SCRIPT_URL}?action=saveScore&name=${encodeURIComponent(name)}&score=${score}`;
-
-            try {
-                // Using GET avoids the complex CORS pre-flight check that fails
-                await fetch(saveUrl, { method: 'GET' });
-                
+            // 1. Set up what happens when it 'loads' (success)
+            img.onload = async function() {
                 alert("Record Saved! You are a legend.");
-                await fetchGlobalScore(); // Refresh
-                
+                await fetchGlobalScore(); // Refresh display
                 document.getElementById('highScoreForm').style.display = 'none';
                 document.getElementById('regularGameOver').style.display = 'block';
-                
-            } catch (error) {
-                console.error("Save error:", error);
-                // Even if it fails, it often actually succeeded in the background with 'no-cors'
-                // So we check if the score updated.
-                setTimeout(fetchGlobalScore, 1000);
-                alert("Score sent! (If it doesn't appear, try refreshing)");
-            } finally {
-                submitBtn.disabled = false;
-                saveText.style.display = "none";
-            }
+            };
+
+            // 2. Set up what happens if it 'fails' (it might still have worked!)
+            img.onerror = async function() {
+                 // Google Scripts sometimes returns text that isn't a valid "image", 
+                 // triggering this error even if the save WORKED.
+                alert("Score sent! Checking leaderboard...");
+                setTimeout(fetchGlobalScore, 1500); 
+                document.getElementById('highScoreForm').style.display = 'none';
+                document.getElementById('regularGameOver').style.display = 'block';
+            };
+
+            // 3. Trigger the request
+            const saveUrl = `${SCRIPT_URL}?action=saveScore&name=${encodeURIComponent(name)}&score=${score}`;
+            img.src = saveUrl;
+            
+            // Cleanup
+            submitBtn.disabled = false;
+            saveText.style.display = "none";
         }
+
         // Initial Fetch
         fetchGlobalScore();
 
