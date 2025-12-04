@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Math Sprint - High Score Edition</title>
+    <title>Math Sprint - Global Leaderboard</title>
     <style>
-        /* Same CSS as before + High Score Styles */
+        /* --- CSS STYLES --- */
         body {
             font-family: 'Arial', sans-serif;
             background-color: #2c3e50;
@@ -17,7 +17,10 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
+            touch-action: manipulation;
         }
+
+        /* Back Button */
         .back-btn {
             position: absolute;
             top: 15px;
@@ -28,16 +31,21 @@
             background: rgba(0,0,0,0.2);
             padding: 8px 15px;
             border-radius: 20px;
+            font-size: 14px;
         }
+
+        /* Main Game Box */
         .game-box {
             background: #34495e;
             padding: 30px;
             border-radius: 15px;
             text-align: center;
-            width: 80%;
+            width: 85%;
             max-width: 400px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
+
+        /* Timer Bar */
         .timer-bar {
             width: 100%;
             height: 10px;
@@ -52,150 +60,280 @@
             width: 100%;
             transition: width 0.1s linear;
         }
-        .question { font-size: 40px; margin: 20px 0; font-weight: bold; }
-        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* Text Elements */
+        .question {
+            font-size: 42px;
+            margin: 20px 0;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .score {
+            font-size: 20px;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* Buttons */
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
         .btn {
             padding: 15px;
-            font-size: 20px;
+            font-size: 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             background: #ecf0f1;
             color: #2c3e50;
             font-weight: bold;
+            transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
         }
-        .score { font-size: 18px; color: #f1c40f; margin-bottom: 10px; }
-        
-        /* High Score Display */
+        .btn:active { transform: scale(0.95); }
+
+        /* Global High Score Badge */
         .high-score-display {
             position: absolute;
             top: 15px;
             right: 15px;
-            font-size: 14px;
+            font-size: 12px;
             color: #bdc3c7;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             padding: 8px 12px;
-            border-radius: 10px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        
-        /* Input Field for Name */
+
+        /* High Score Input Form */
+        .input-group {
+            margin-top: 20px;
+        }
         .name-input {
-            padding: 10px;
+            padding: 12px;
             width: 70%;
-            margin: 15px 0;
             border-radius: 5px;
             border: none;
             font-size: 16px;
+            text-align: center;
+            margin-bottom: 10px;
         }
         .submit-btn {
-            background: #f1c40f;
-            color: #2c3e50;
+            background: #27ae60;
+            color: white;
             width: 100%;
             padding: 12px;
             font-weight: bold;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 16px;
         }
-        #gameOver, #highScoreForm { display: none; }
+        
+        /* Hidden States */
+        #gameOver, #highScoreForm, #loadingBadge { display: none; }
+        
+        /* Loading Spinner for High Score */
+        .loader {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            border-top: 2px solid #f1c40f;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+    <!-- Back to Menu Link -->
     <a href="index.html" class="back-btn">← Menu</a>
     
-    <!-- Shows Current High Score from Server -->
+    <!-- Global High Score Display (Top Right) -->
     <div class="high-score-display">
-        🏆 Record: <span id="globalHighScore">0</span> (<span id="recordHolder">CPU</span>)
+        🏆 World Record: <span id="globalHighScore">...</span> 
+        <span id="recordHolder" style="font-size: 0.9em; opacity: 0.8;">(Loading)</span>
     </div>
 
+    <!-- ACTIVE GAME SCREEN -->
     <div class="game-box" id="gameScreen">
         <div class="score">Score: <span id="scoreVal">0</span></div>
         <div class="timer-bar"><div class="timer-fill" id="timerBar"></div></div>
-        <div class="question" id="questionText">Loading...</div>
+        
+        <div class="question" id="questionText">Ready?</div>
+        
         <div class="options">
-            <button class="btn" id="btn1" onclick="checkAnswer(this)"></button>
-            <button class="btn" id="btn2" onclick="checkAnswer(this)"></button>
+            <button class="btn" id="btn1" onclick="handleBtnClick(this)">Start</button>
+            <button class="btn" id="btn2" onclick="handleBtnClick(this)">Start</button>
         </div>
     </div>
 
+    <!-- GAME OVER SCREEN -->
     <div class="game-box" id="gameOver">
-        <h2>Time's Up!</h2>
-        <p>Your Score: <span id="finalScore">0</span></p>
+        <h2 style="margin-top:0">Time's Up!</h2>
+        <p style="font-size: 18px;">Your Score: <span id="finalScore" style="color: #f1c40f; font-weight: bold;">0</span></p>
         
-        <!-- Only shows if you beat the high score -->
+        <!-- Form: Only shows if player beat the global record -->
         <div id="highScoreForm">
-            <h3 style="color: #f1c40f">🎉 NEW RECORD! 🎉</h3>
-            <input type="text" id="playerName" class="name-input" placeholder="Enter your name" maxlength="10">
-            <button class="submit-btn" onclick="submitHighScore()">Save Record</button>
+            <h3 style="color: #f1c40f; margin: 10px 0;">🎉 NEW WORLD RECORD! 🎉</h3>
+            <div class="input-group">
+                <input type="text" id="playerName" class="name-input" placeholder="Enter your name" maxlength="12">
+                <button class="submit-btn" onclick="submitToGoogleSheets()">Save Record</button>
+            </div>
+            <p id="savingText" style="display:none; color: #bdc3c7; font-size: 12px;">Saving to cloud...</p>
         </div>
         
+        <!-- Regular Replay Button (Hidden if High Score Form is active) -->
         <div id="regularGameOver">
-            <button class="btn" style="background: #27ae60; color: white; width: 100%; margin-top: 10px;" onclick="startGame()">Play Again</button>
+            <button class="btn" style="background: #3498db; color: white; width: 100%; font-size: 18px;" onclick="startGame()">Play Again</button>
         </div>
     </div>
 
     <script>
+        // --- CONFIGURATION ---
+        // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHh......./exec"; 
+
+        // --- GAME VARIABLES ---
         let score = 0;
         let timeLeft = 100;
         let gameActive = false;
         let timerInterval;
         let currentAnswer = 0;
-        let globalRecord = 0; // Stores the server record
+        let globalBestScore = 0;
 
-        // 1. Fetch High Score on Load
-        async function fetchHighScore() {
+        // --- 1. GOOGLE SHEETS INTEGRATION ---
+
+        // Fetch current high score on load
+        async function fetchGlobalScore() {
             try {
-                const res = await fetch('api.php');
-                const data = await res.json();
-                globalRecord = data.score;
-                document.getElementById('globalHighScore').innerText = data.score;
-                document.getElementById('recordHolder').innerText = data.name;
-            } catch (e) {
-                console.error("Could not fetch scores", e);
+                // Show loading state
+                document.getElementById('recordHolder').innerHTML = '<div class="loader"></div>';
+                
+                const response = await fetch(SCRIPT_URL + "?action=getHighScore");
+                const data = await response.json();
+                
+                globalBestScore = parseInt(data.score) || 0;
+                
+                document.getElementById('globalHighScore').innerText = globalBestScore;
+                document.getElementById('recordHolder').innerText = `(${data.name || 'CPU'})`;
+            } catch (error) {
+                console.error("Error fetching score:", error);
+                document.getElementById('globalHighScore').innerText = "-";
+                document.getElementById('recordHolder').innerText = "(Offline)";
             }
         }
-        fetchHighScore();
+
+        // Save new high score
+        async function submitToGoogleSheets() {
+            const nameInput = document.getElementById('playerName');
+            const name = nameInput.value.trim() || "Anonymous";
+            const saveText = document.getElementById('savingText');
+            const submitBtn = document.querySelector('.submit-btn');
+
+            // UI Feedback
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = "0.7";
+            saveText.style.display = "block";
+
+            // Create Form Data for Google Script
+            const formData = new FormData();
+            formData.append('action', 'saveScore');
+            formData.append('name', name);
+            formData.append('score', score);
+
+            try {
+                // Send POST request
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                alert("Record Saved to Google Sheets!");
+                
+                // Refresh the display
+                await fetchGlobalScore();
+                
+                // Return to normal game over screen
+                document.getElementById('highScoreForm').style.display = 'none';
+                document.getElementById('regularGameOver').style.display = 'block';
+                
+            } catch (error) {
+                alert("Error saving score. Check internet connection.");
+                submitBtn.disabled = false;
+                saveText.style.display = "none";
+            }
+        }
+
+        // Initial Fetch
+        fetchGlobalScore();
+
+
+        // --- 2. GAME LOGIC ---
 
         function startGame() {
             score = 0;
             timeLeft = 100;
             gameActive = true;
+            
             document.getElementById('scoreVal').innerText = score;
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
+            
             generateQuestion();
             
+            // Start Timer Loop
             if(timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(() => {
-                timeLeft -= 0.5;
+                timeLeft -= 0.5; // Speed of drain
                 document.getElementById('timerBar').style.width = timeLeft + "%";
                 if(timeLeft <= 0) endGame();
             }, 50);
         }
 
         function generateQuestion() {
-            let n1 = Math.floor(Math.random() * 10) + 1;
-            let n2 = Math.floor(Math.random() * 10) + 1;
+            // Simple difficulty curve could go here
+            let maxNum = 10 + Math.floor(score / 5); 
+            let n1 = Math.floor(Math.random() * maxNum) + 1;
+            let n2 = Math.floor(Math.random() * maxNum) + 1;
             currentAnswer = n1 + n2;
+            
             document.getElementById('questionText').innerText = `${n1} + ${n2} = ?`;
             
+            // Generate a wrong answer close to the real one
             let wrongAnswer = currentAnswer + Math.floor(Math.random() * 3) + 1;
+            if (wrongAnswer === currentAnswer) wrongAnswer += 1;
+            
+            // Randomize buttons
+            const btn1 = document.getElementById('btn1');
+            const btn2 = document.getElementById('btn2');
+            
             if(Math.random() > 0.5) {
-                document.getElementById('btn1').innerText = currentAnswer;
-                document.getElementById('btn2').innerText = wrongAnswer;
+                btn1.innerText = currentAnswer;
+                btn2.innerText = wrongAnswer;
             } else {
-                document.getElementById('btn1').innerText = wrongAnswer;
-                document.getElementById('btn2').innerText = currentAnswer;
+                btn1.innerText = wrongAnswer;
+                btn2.innerText = currentAnswer;
             }
         }
 
-        function checkAnswer(btn) {
-            if(!gameActive) return;
+        function handleBtnClick(btn) {
+            if(!gameActive) {
+                startGame();
+                return;
+            }
+            
+            // Check if button text matches answer
+            // (ParseInt handles the case where text might be string)
             if(parseInt(btn.innerText) === currentAnswer) {
                 score++;
                 document.getElementById('scoreVal').innerText = score;
-                timeLeft = Math.min(100, timeLeft + 10);
+                timeLeft = Math.min(100, timeLeft + 10); // Add bonus time
                 generateQuestion();
             } else {
                 endGame();
@@ -205,39 +343,19 @@
         function endGame() {
             gameActive = false;
             clearInterval(timerInterval);
+            
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('gameOver').style.display = 'block';
             document.getElementById('finalScore').innerText = score;
 
-            // Check if we beat the server record
-            if (score > globalRecord) {
+            // LOGIC: Did we beat the global score?
+            // We check > globalBestScore OR if globalBestScore is 0 (first run)
+            if (score > globalBestScore) {
                 document.getElementById('highScoreForm').style.display = 'block';
                 document.getElementById('regularGameOver').style.display = 'none';
             } else {
                 document.getElementById('highScoreForm').style.display = 'none';
                 document.getElementById('regularGameOver').style.display = 'block';
-            }
-        }
-
-        // 2. Submit New High Score
-        async function submitHighScore() {
-            const name = document.getElementById('playerName').value || "Anonymous";
-            const payload = { name: name, score: score };
-
-            try {
-                await fetch('game/api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // Refresh the display and reset
-                await fetchHighScore();
-                document.getElementById('highScoreForm').style.display = 'none';
-                document.getElementById('regularGameOver').style.display = 'block';
-                alert("Record Saved! You are the new champion.");
-            } catch (e) {
-                alert("Error saving score.");
             }
         }
     </script>
